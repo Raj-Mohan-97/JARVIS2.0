@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<!--
+  ============================================================
+  J.A.R.V.I.S. — Voice AI Assistant (powered by Google Gemini)
+  ============================================================
+  Single-file web app. Just open in Chrome/Edge/Safari.
+  Get a FREE Gemini API key at: https://aistudio.google.com/apikey
+  ============================================================
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<meta name="theme-color" content="#000814" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="J.A.R.V.I.S." />
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="icon-192.svg" />
+<title>J.A.R.V.I.S. — Your AI Agent</title>
+<style>
+  /* ---------- Base / Reset ---------- */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: radial-gradient(circle at 20% 20%, #0a1929 0%, #000814 60%, #000 100%);
+    color: #e0f2ff;
+    overflow: hidden;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ---------- Layout ---------- */
+  .app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 16px;
+    gap: 12px;
+  }
+
+  /* ---------- Header ---------- */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 4px;
+    border-bottom: 1px solid rgba(0, 229, 255, 0.2);
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo-orb {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #00e5ff 0%, #0091ea 50%, #001a33 100%);
+    box-shadow: 0 0 20px #00e5ff, inset 0 0 10px rgba(255,255,255,0.3);
+    animation: orbPulse 3s ease-in-out infinite;
+  }
+  @keyframes orbPulse {
+    0%, 100% { box-shadow: 0 0 20px #00e5ff, inset 0 0 10px rgba(255,255,255,0.3); }
+    50%      { box-shadow: 0 0 35px #00e5ff, inset 0 0 15px rgba(255,255,255,0.5); }
+  }
+  .logo h1 {
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: 4px;
+    color: #00e5ff;
+    text-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
+  }
+  .header-btns { display: flex; gap: 8px; }
+  .icon-btn {
+    background: rgba(0, 229, 255, 0.1);
+    border: 1px solid rgba(0, 229, 255, 0.3);
+    color: #00e5ff;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+  .icon-btn:hover { background: rgba(0, 229, 255, 0.2); }
+
+  /* ---------- Setup Modal ---------- */
+  .modal-bg {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 20px;
+  }
+  .modal-bg.show { display: flex; }
+  .modal {
+    background: linear-gradient(145deg, #0a1929, #001a33);
+    border: 1px solid rgba(0, 229, 255, 0.4);
+    border-radius: 16px;
+    padding: 28px;
+    max-width: 480px;
+    width: 100%;
+    box-shadow: 0 0 50px rgba(0, 229, 255, 0.2);
+  }
+  .modal h2 {
+    color: #00e5ff;
+    margin-bottom: 12px;
+    font-size: 22px;
+    letter-spacing: 2px;
+  }
+  .modal p { font-size: 14px; line-height: 1.6; margin-bottom: 16px; color: #b0d4e8; }
+  .modal a { color: #00e5ff; text-decoration: none; border-bottom: 1px dashed; }
+  .modal input, .modal select {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(0, 229, 255, 0.3);
+    color: #e0f2ff;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    margin-bottom: 14px;
+    font-family: inherit;
+  }
+  .modal input:focus, .modal select:focus { outline: none; border-color: #00e5ff; }
+  .modal label {
+    display: block;
+    font-size: 12px;
+    color: #80c8e0;
+    margin-bottom: 6px;
+    letter-spacing: 1px;
+  }
+  .modal-btn {
+    background: linear-gradient(135deg, #00e5ff, #0091ea);
+    color: #001a33;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 1px;
+    width: 100%;
+    transition: all 0.2s;
+  }
+  .modal-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(0,229,255,0.4); }
+
+  /* ---------- Chat Area ---------- */
+  .chat {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 229, 255, 0.3) transparent;
+    user-select: text;
+  }
+  .chat::-webkit-scrollbar { width: 6px; }
+  .chat::-webkit-scrollbar-thumb { background: rgba(0, 229, 255, 0.3); border-radius: 3px; }
+
+  .msg {
+    max-width: 85%;
+    padding: 12px 16px;
+    border-radius: 14px;
+    font-size: 15px;
+    line-height: 1.5;
+    word-wrap: break-word;
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  .msg.user {
+    align-self: flex-end;
+    background: linear-gradient(135deg, #0091ea, #006eb3);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+  }
+  .msg.jarvis {
+    align-self: flex-start;
+    background: rgba(0, 229, 255, 0.08);
+    border: 1px solid rgba(0, 229, 255, 0.25);
+    border-bottom-left-radius: 4px;
+  }
+  .msg.system {
+    align-self: center;
+    background: rgba(255, 200, 0, 0.1);
+    border: 1px solid rgba(255, 200, 0, 0.3);
+    color: #ffd54f;
+    font-size: 13px;
+    max-width: 95%;
+    text-align: center;
+  }
+  .msg .label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    opacity: 0.7;
+    margin-bottom: 4px;
+    display: block;
+  }
+  .msg.jarvis .label { color: #00e5ff; }
+
+  /* ---------- Mic Button ---------- */
+  .mic-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0 4px;
+  }
+  .status-text {
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #80c8e0;
+    min-height: 16px;
+    text-align: center;
+  }
+  .mic-btn {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    border: none;
+    background: radial-gradient(circle, #00e5ff 0%, #0091ea 70%);
+    color: #001a33;
+    font-size: 38px;
+    cursor: pointer;
+    box-shadow: 0 0 30px rgba(0, 229, 255, 0.4);
+    transition: all 0.2s;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .mic-btn:hover:not(:disabled) { transform: scale(1.05); }
+  .mic-btn:active:not(:disabled) { transform: scale(0.95); }
+  .mic-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .mic-btn.listening {
+    background: radial-gradient(circle, #ff5252 0%, #d32f2f 70%);
+    animation: pulse 1.2s ease-out infinite;
+  }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(255, 82, 82, 0.7); }
+    70%  { box-shadow: 0 0 0 25px rgba(255, 82, 82, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 82, 82, 0); }
+  }
+  .mic-btn.speaking {
+    background: radial-gradient(circle, #69f0ae 0%, #00c853 70%);
+    animation: pulse-green 1.2s ease-out infinite;
+  }
+  @keyframes pulse-green {
+    0%   { box-shadow: 0 0 0 0 rgba(105, 240, 174, 0.7); }
+    70%  { box-shadow: 0 0 0 25px rgba(105, 240, 174, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(105, 240, 174, 0); }
+  }
+
+  .action-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .action-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #b0d4e8;
+    padding: 8px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+  }
+  .action-btn:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+
+  /* ---------- Text input fallback ---------- */
+  .text-input-row {
+    display: flex;
+    gap: 8px;
+    padding: 4px;
+  }
+  .text-input-row input {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(0, 229, 255, 0.2);
+    color: #e0f2ff;
+    padding: 10px 14px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-family: inherit;
+  }
+  .text-input-row input:focus { outline: none; border-color: #00e5ff; }
+  .text-input-row button {
+    background: linear-gradient(135deg, #00e5ff, #0091ea);
+    color: #001a33;
+    border: none;
+    padding: 0 18px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: 700;
+  }
+
+  /* ---------- Mobile tweaks ---------- */
+  @media (max-width: 600px) {
+    .logo h1 { font-size: 16px; letter-spacing: 3px; }
+    .mic-btn { width: 80px; height: 80px; font-size: 32px; }
+    .msg { font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <div class="logo-orb"></div>
+      <h1>J.A.R.V.I.S.</h1>
+    </div>
+    <div class="header-btns">
+      <button class="icon-btn" id="settings-btn" title="Settings">⚙️</button>
+      <button class="icon-btn" id="clear-btn" title="Clear chat">🗑️</button>
+    </div>
+  </header>
+
+  <!-- Chat Messages -->
+  <div class="chat" id="chat"></div>
+
+  <!-- Status + Mic -->
+  <div class="mic-wrap">
+    <div class="status-text" id="status">Tap the mic to speak</div>
+    <button class="mic-btn" id="mic-btn" title="Hold to speak">🎤</button>
+    <div class="action-row">
+      <button class="action-btn" id="stop-btn">🔇 Stop Speaking</button>
+      <button class="action-btn" id="export-btn">💾 Export Chat</button>
+    </div>
+  </div>
+
+  <!-- Text Input Fallback -->
+  <div class="text-input-row">
+    <input type="text" id="text-input" placeholder="Or type your message..." />
+    <button id="send-btn">Send</button>
+  </div>
+
+</div>
+
+<!-- ============== SETTINGS MODAL ============== -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h2>⚡ INITIALIZE J.A.R.V.I.S.</h2>
+    <p>Welcome, sir. To activate your AI agent, please provide your free Google Gemini API key.</p>
+    <p>Get one in 30 seconds → <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a> (free, no credit card)</p>
+
+    <label>GEMINI API KEY</label>
+    <input type="password" id="api-key" placeholder="AIzaSy..." autocomplete="off" />
+
+    <label>AI MODEL</label>
+    <select id="model-select">
+      <option value="gemini-2.0-flash">Gemini 2.0 Flash (recommended — fast & free)</option>
+      <option value="gemini-2.5-flash">Gemini 2.5 Flash (smarter)</option>
+      <option value="gemini-2.5-pro">Gemini 2.5 Pro (most capable)</option>
+      <option value="gemini-1.5-flash">Gemini 1.5 Flash (legacy)</option>
+    </select>
+
+    <label>VOICE LANGUAGE</label>
+    <select id="lang-select">
+      <option value="en-US">English (US)</option>
+      <option value="en-GB">English (UK)</option>
+      <option value="en-IN">English (India)</option>
+      <option value="hi-IN">Hindi (India)</option>
+      <option value="es-ES">Spanish</option>
+      <option value="fr-FR">French</option>
+      <option value="de-DE">German</option>
+      <option value="ja-JP">Japanese</option>
+      <option value="zh-CN">Chinese (Mandarin)</option>
+    </select>
+
+    <label>PERSONALITY (system prompt)</label>
+    <input type="text" id="personality" placeholder="e.g. You are JARVIS, witty British AI butler..." />
+
+    <button class="modal-btn" id="save-btn">⚡ ACTIVATE</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   J.A.R.V.I.S. — Core Script
+   ============================================================ */
+
+// ---------- DOM refs ----------
+const chatEl       = document.getElementById('chat');
+const micBtn       = document.getElementById('mic-btn');
+const stopBtn      = document.getElementById('stop-btn');
+const clearBtn     = document.getElementById('clear-btn');
+const exportBtn    = document.getElementById('export-btn');
+const settingsBtn  = document.getElementById('settings-btn');
+const saveBtn      = document.getElementById('save-btn');
+const modal        = document.getElementById('modal');
+const apiKeyInput  = document.getElementById('api-key');
+const modelSelect  = document.getElementById('model-select');
+const langSelect   = document.getElementById('lang-select');
+const personalityInput = document.getElementById('personality');
+const statusEl     = document.getElementById('status');
+const textInput    = document.getElementById('text-input');
+const sendBtn      = document.getElementById('send-btn');
+
+// ---------- Default personality (JARVIS-style) ----------
+const DEFAULT_PERSONALITY =
+  "You are J.A.R.V.I.S. (Just A Rather Very Intelligent System), a sophisticated AI assistant " +
+  "modeled after Tony Stark's AI. You are witty, confident, articulate, and slightly British in tone. " +
+  "You address the user respectfully (e.g. 'sir' or 'boss' occasionally, not every reply). " +
+  "Keep responses concise and conversational since they will be spoken aloud — usually 1-3 sentences. " +
+  "Avoid markdown, bullet points, or code blocks unless explicitly asked. Be helpful, clever, and a touch dry.";
+
+// ---------- State ----------
+let settings = {
+  apiKey: '',
+  model: 'gemini-2.0-flash',
+  lang: 'en-US',
+  personality: DEFAULT_PERSONALITY
+};
+let history = []; // [{role:'user'|'model', text:'...'}]
+let recognition = null;
+let isListening = false;
+let isSpeaking  = false;
+let isThinking  = false;
+
+/* ============================================================
+   STORAGE
+   ============================================================ */
+function loadSettings() {
+  const raw = localStorage.getItem('jarvis_settings');
+  if (raw) try { settings = { ...settings, ...JSON.parse(raw) }; } catch(e) {}
+  apiKeyInput.value     = settings.apiKey || '';
+  modelSelect.value     = settings.model;
+  langSelect.value      = settings.lang;
+  personalityInput.value = settings.personality === DEFAULT_PERSONALITY ? '' : settings.personality;
+}
+function saveSettings() {
+  settings.apiKey      = apiKeyInput.value.trim();
+  settings.model       = modelSelect.value;
+  settings.lang        = langSelect.value;
+  settings.personality = personalityInput.value.trim() || DEFAULT_PERSONALITY;
+  localStorage.setItem('jarvis_settings', JSON.stringify(settings));
+}
+function loadHistory() {
+  const raw = localStorage.getItem('jarvis_history');
+  if (raw) try { history = JSON.parse(raw); } catch(e) { history = []; }
+  history.forEach(m => renderMessage(m.role === 'user' ? 'user' : 'jarvis', m.text, false));
+}
+function saveHistory() {
+  // Keep last 40 turns to bound size
+  const trimmed = history.slice(-40);
+  localStorage.setItem('jarvis_history', JSON.stringify(trimmed));
+  history = trimmed;
+}
+
+/* ============================================================
+   UI HELPERS
+   ============================================================ */
+function renderMessage(type, text, save = true) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + type;
+  const labels = { user: 'YOU', jarvis: 'J.A.R.V.I.S.', system: 'SYSTEM' };
+  div.innerHTML = `<span class="label">${labels[type] || ''}</span>${escapeHtml(text)}`;
+  chatEl.appendChild(div);
+  chatEl.scrollTop = chatEl.scrollHeight;
+  if (save && (type === 'user' || type === 'jarvis')) {
+    history.push({ role: type === 'user' ? 'user' : 'model', text });
+    saveHistory();
+  }
+}
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function setStatus(text) { statusEl.textContent = text; }
+
+/* ============================================================
+   SPEECH RECOGNITION (voice input)
+   ============================================================ */
+function initRecognition() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    renderMessage('system', '⚠️ Voice input not supported in this browser. Use Chrome, Edge, or Safari. You can still type below.');
+    micBtn.disabled = true;
+    return;
+  }
+  recognition = new SR();
+  recognition.lang = settings.lang;
+  recognition.continuous = false;
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  recognition.onstart = () => {
+    isListening = true;
+    micBtn.classList.add('listening');
+    setStatus('🎤 Listening...');
+  };
+  recognition.onresult = (e) => {
+    const transcript = e.results[0][0].transcript.trim();
+    if (transcript) handleUserMessage(transcript);
+  };
+  recognition.onerror = (e) => {
+    setStatus('Error: ' + e.error);
+    if (e.error === 'not-allowed') {
+      renderMessage('system', '🎙️ Microphone permission denied. Please allow mic access in your browser settings.');
+    }
+  };
+  recognition.onend = () => {
+    isListening = false;
+    micBtn.classList.remove('listening');
+    if (!isThinking && !isSpeaking) setStatus('Tap the mic to speak');
+  };
+}
+
+function toggleListening() {
+  if (!recognition) return;
+  if (isListening) { recognition.stop(); return; }
+  // Stop any current speech
+  window.speechSynthesis.cancel();
+  isSpeaking = false;
+  micBtn.classList.remove('speaking');
+  try { recognition.lang = settings.lang; recognition.start(); } catch(e) {}
+}
+
+/* ============================================================
+   GEMINI API CALL
+   ============================================================ */
+async function askGemini(userText) {
+  if (!settings.apiKey) {
+    renderMessage('system', '🔑 Please set your Gemini API key in settings first.');
+    modal.classList.add('show');
+    return null;
+  }
+
+  // Build conversation contents
+  const contents = history.slice(-20).map(m => ({
+    role: m.role,
+    parts: [{ text: m.text }]
+  }));
+
+  const body = {
+    systemInstruction: { parts: [{ text: settings.personality }] },
+    contents,
+    generationConfig: {
+      temperature: 0.8,
+      maxOutputTokens: 1024
+    }
+  };
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(settings.model)}:generateContent?key=${encodeURIComponent(settings.apiKey)}`;
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      const errMsg = data?.error?.message || ('HTTP ' + res.status);
+      throw new Error(errMsg);
+    }
+    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!reply) throw new Error('Empty response from Gemini.');
+    return reply.trim();
+  } catch (err) {
+    renderMessage('system', '❌ ' + err.message);
+    return null;
+  }
+}
+
+/* ============================================================
+   TEXT-TO-SPEECH (voice output)
+   ============================================================ */
+function speak(text) {
+  if (!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+
+  // Strip markdown-ish chars for cleaner speech
+  const clean = text.replace(/[*_`#>]/g, '').replace(/\[[^\]]*\]\([^)]*\)/g, '');
+
+  const utter = new SpeechSynthesisUtterance(clean);
+  utter.lang = settings.lang;
+  utter.rate = 1.0;
+  utter.pitch = 1.0;
+  utter.volume = 1.0;
+
+  // Pick a voice matching the language if available (prefer male/British for JARVIS vibe)
+  const voices = window.speechSynthesis.getVoices();
+  const matching = voices.filter(v => v.lang.startsWith(settings.lang.split('-')[0]));
+  const preferred = matching.find(v => /male|daniel|google uk english male|microsoft george/i.test(v.name))
+                    || matching[0];
+  if (preferred) utter.voice = preferred;
+
+  utter.onstart = () => {
+    isSpeaking = true;
+    micBtn.classList.add('speaking');
+    setStatus('🔊 Speaking...');
+  };
+  utter.onend = () => {
+    isSpeaking = false;
+    micBtn.classList.remove('speaking');
+    setStatus('Tap the mic to speak');
+  };
+  utter.onerror = () => {
+    isSpeaking = false;
+    micBtn.classList.remove('speaking');
+  };
+
+  window.speechSynthesis.speak(utter);
+}
+
+/* ============================================================
+   CONVERSATION FLOW
+   ============================================================ */
+async function handleUserMessage(text) {
+  if (!text) return;
+  renderMessage('user', text);
+  isThinking = true;
+  setStatus('🧠 Thinking...');
+  const reply = await askGemini(text);
+  isThinking = false;
+  if (reply) {
+    renderMessage('jarvis', reply);
+    speak(reply);
+  } else {
+    setStatus('Tap the mic to speak');
+  }
+}
+
+/* ============================================================
+   ACTIONS / EVENTS
+   ============================================================ */
+micBtn.addEventListener('click', toggleListening);
+
+stopBtn.addEventListener('click', () => {
+  window.speechSynthesis.cancel();
+  isSpeaking = false;
+  micBtn.classList.remove('speaking');
+  setStatus('Tap the mic to speak');
+});
+
+clearBtn.addEventListener('click', () => {
+  if (!confirm('Clear all conversation history?')) return;
+  history = [];
+  localStorage.removeItem('jarvis_history');
+  chatEl.innerHTML = '';
+  renderMessage('system', '🗑️ Memory wiped. Ready for a fresh start, sir.');
+});
+
+exportBtn.addEventListener('click', () => {
+  if (!history.length) { alert('Nothing to export yet.'); return; }
+  const lines = history.map(m => `[${m.role === 'user' ? 'YOU' : 'JARVIS'}] ${m.text}`);
+  const blob = new Blob([lines.join('\n\n')], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `jarvis-chat-${new Date().toISOString().slice(0,10)}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+settingsBtn.addEventListener('click', () => modal.classList.add('show'));
+
+saveBtn.addEventListener('click', () => {
+  if (!apiKeyInput.value.trim()) { alert('Please enter your Gemini API key.'); return; }
+  saveSettings();
+  modal.classList.remove('show');
+  if (recognition) recognition.lang = settings.lang;
+  renderMessage('system', '⚡ JARVIS online. At your service, sir.');
+});
+
+sendBtn.addEventListener('click', () => {
+  const txt = textInput.value.trim();
+  if (!txt) return;
+  textInput.value = '';
+  handleUserMessage(txt);
+});
+textInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendBtn.click();
+});
+
+// Close modal on background tap (only if API key already set)
+modal.addEventListener('click', (e) => {
+  if (e.target === modal && settings.apiKey) modal.classList.remove('show');
+});
+
+/* ============================================================
+   BOOT
+   ============================================================ */
+function boot() {
+  loadSettings();
+  loadHistory();
+  initRecognition();
+
+  // Pre-warm voices (some browsers load them async)
+  if ('speechSynthesis' in window) window.speechSynthesis.getVoices();
+
+  if (!settings.apiKey) {
+    modal.classList.add('show');
+  } else if (!history.length) {
+    renderMessage('jarvis', 'Good day, sir. JARVIS online and ready. How may I assist you?');
+    speak('Good day, sir. JARVIS online and ready. How may I assist you?');
+  }
+}
+boot();
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      console.log('SW registered:', reg.scope);
+    }).catch(err => console.log('SW error:', err));
+  });
+}
+</script>
+
+</body>
+</html>
